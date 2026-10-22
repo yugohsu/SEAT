@@ -1153,7 +1153,7 @@ function flightBlock(r, al, fa){
     <div class="ftime">${timesHtml(r)}</div>
     <div class="tiles">${tiles.map(t => `<div class="tile${t[2] ? ' hl' : ''}"><div class="k">${t[0]}</div><div class="v${t[3] ? ' s' : ''}">${esc(t[1])}</div></div>`).join('')}</div>
     ${!dep && r.jp && r.jp.checkin ? `<div class="note">${esc(r.jp.checkin)} 開始報到</div>` : ''}
-    ${!dep && !r.jp ? '<div class="note">日本的櫃台和登機門，出發前一天到當天公布</div>' : ''}
+    ${!dep && !r.jp ? (r.jpErr ? `<div class="note">日本機場官網暫時讀不到（${esc(r.jpErr)}）</div>` : '<div class="note">日本的櫃台和登機門，出發前一天到當天公布</div>') : ''}
   </div>`;
 }
 
