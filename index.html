@@ -1056,14 +1056,16 @@ function flightBlock(r, al){
   const term = r.terminal === '1' ? 'T1' : (r.terminal === '2' ? 'T2' : '—');
   const late = r.estTime && r.estTime !== r.schedTime;
   const ref = r.source && r.source !== 'live';
+  const tg = term + ' - ' + (r.gate || (ref ? '當天公布' : '未公布'));
   const tiles = dep
-    ? [[ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? r.counter + ' 號' : '—', true], ['登機門', r.gate || (ref ? '當天公布' : '未公布')], ['航廈', term], ['機型', r.aircraft || '—', false, true]]
-    : [[ref ? '行李轉盤（參考）' : '行李轉盤', r.carousel ? parseInt(r.carousel,10) + ' 號' : '—', true], ['抵達門', r.gate || '—'], ['航廈', term], ['機型', r.aircraft || '—', false, true]];
+    ? [[ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? r.counter + ' 號' : '—', true], ['航廈・登機門', tg, false, r.gate ? false : true]]
+    : [[ref ? '行李轉盤（參考）' : '行李轉盤', r.carousel ? parseInt(r.carousel,10) + ' 號' : '—', true], ['航廈・抵達門', term + ' - ' + (r.gate || '—')]];
   return `<div class="fcard">
     <div class="f-top"><span class="f-title">${dep ? '出發' : '抵達'}　${esc(r.flightNo)}</span><span class="pill ${pillClass(r.status)}">${esc(r.status)}</span></div>
     <div class="route">${dep ? '桃園 → ' + esc(r.placeZh) : esc(r.placeZh) + ' → 桃園'}</div>
     <div class="ftime">${esc(al.name)}・${dep ? '起飛' : '抵達'} ${esc(r.schedTime)}${late ? '　<b>預計 ' + esc(r.estTime) + '</b>' : ''}</div>
     <div class="tiles">${tiles.map(t => `<div class="tile${t[2] ? ' hl' : ''}"><div class="k">${t[0]}</div><div class="v${t[3] ? ' s' : ''}">${esc(t[1])}</div></div>`).join('')}</div>
+    ${r.aircraft ? `<div class="note">機型 ${esc(r.aircraft)}</div>` : ''}
   </div>`;
 }
 
