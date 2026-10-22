@@ -138,6 +138,9 @@ select{font-size:17px;}
 .muted{font-size:14px;color:var(--muted);}
 .rv div+div{margin-top:4px;}
 .ap-note{font-size:17px;min-height:70px;margin-top:2px;}
+.chk{border-radius:12px;padding:8px 12px;font-size:15px;font-weight:900;margin:2px 0 4px;}
+.chk.ok{background:var(--ok-bg);color:var(--ok);}
+.chk.bad{background:var(--bad-bg);color:var(--bad);}
 .hidden{display:none !important;}
 </style>
 </head>
@@ -1082,6 +1085,7 @@ function airportHtml(code, airline){
   const note = load('ap_note_' + code) || '';
   return `<div class="ap">
     <div class="ap-head">${esc(a.name)}機場</div>
+    <div class="ap-check" data-code="${code}">${apCheckHtml(code)}</div>
     ${blocks.map(b => `
       <div class="ap-area">${esc(b.area)}</div>
       <div class="ap-order">櫃台順序：${esc(b.order)}</div>
@@ -1095,6 +1099,37 @@ function airportHtml(code, airline){
     <textarea class="ap-note" data-code="${code}" placeholder="例：秤在 C 櫃台對面柱子旁" oninput="store('ap_note_'+this.dataset.code,this.value)">${esc(note)}</textarea>
     <div class="links">${a.links.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>
   </div>`;
+}
+
+/* 比對官方地圖有沒有變動（Code.gs 每 12 小時查一次） */
+let AP_STATUS = null;
+function apCheckHtml(code){
+  if(!AP_STATUS) return '<div class="muted">正在比對官方地圖…</div>';
+  const st = (AP_STATUS.airports || {})[code];
+  const day = md(AP_STATUS.checkedAt || '');
+  if(!st) return '';
+  if(st.status === 'same') return `<div class="chk ok">與官方地圖一致（${esc(day)} 比對）</div>`;
+  if(st.status === 'changed') return `<div class="chk bad">官方地圖有變動，位置可能不一樣了。請到現場確認，並跟 Claude 說「更新機場資料」</div>`;
+  if(st.status === 'manual') return `<div class="muted">成田無法自動比對，資料日期 ${esc(AP_STATUS.baseDate || '')}</div>`;
+  return `<div class="muted">暫時無法比對，資料日期 ${esc(AP_STATUS.baseDate || '')}</div>`;
+}
+function refreshApChecks(){
+  document.querySelectorAll('.ap-check').forEach(el => el.innerHTML = apCheckHtml(el.dataset.code));
+}
+async function loadApStatus(){
+  try{
+    const c = JSON.parse(load('ap_status') || 'null');
+    if(c && Date.now() - c.t < 6 * 3600 * 1000){ AP_STATUS = c.d; refreshApChecks(); return; }
+  }catch(e){}
+  const api = apiUrl();
+  if(!api){ AP_STATUS = {airports:{}}; refreshApChecks(); return; }
+  try{
+    const r = await fetch(api + (api.includes('?') ? '&' : '?') + 'action=airports', {cache:'no-store'});
+    const d = await r.json();
+    if(d && d.ok){ AP_STATUS = d; store('ap_status', JSON.stringify({t:Date.now(), d})); }
+    else AP_STATUS = {airports:{}};
+  }catch(e){ AP_STATUS = {airports:{}}; }
+  refreshApChecks();
 }
 
 function jpBlock(code, airline){ return `<div class="info">${airportHtml(code, airline)}</div>`; }
@@ -1112,6 +1147,7 @@ function showAirport(){
   const al = load('ap_airline'); if(al) $('apAirline').value = al;
   if(load('tb_secAirport') === '0') $('secAirport').classList.add('closed');
   showAirport();
+  loadApStatus();
 })();
 
 </script>
