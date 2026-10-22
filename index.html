@@ -1039,7 +1039,7 @@ async function searchFlight(){
   }else if(data.mode === 'estimate'){
     h += `<div class="msg warn">時刻表還沒公布，依最近一班推估，出發前一天再查一次</div>`;
   }
-  rows.forEach(r => h += flightBlock(r, al));
+  rows.forEach(r => h += flightBlock(r, al, data.fa));
 
   const r0 = rows[0];
   if(r0){
@@ -1051,21 +1051,57 @@ async function searchFlight(){
 
 function pillClass(s){ return /取消/.test(s) ? 'bad' : (/延|更改|變更|預估/.test(s) ? 'warn' : (/時刻表/.test(s) ? 'info' : 'ok')); }
 
-function flightBlock(r, al){
+/* 登機時間：起飛前 40 分鐘（一般國際線慣例，實際以登機證為準） */
+function boardTime(hhmm){
+  if(!/^\d{1,2}:\d{2}$/.test(hhmm || '')) return '';
+  const [h,m] = hhmm.split(':').map(Number);
+  let t = h*60 + m - 40; t = ((t % 1440) + 1440) % 1440;
+  return String(Math.floor(t/60)).padStart(2,'0') + ':' + String(t%60).padStart(2,'0');
+}
+
+/* 從 FlightAware 資料找這一班（有金鑰才有） */
+function faFor(fa, r){
+  if(!fa || !fa.ok || !fa.flights) return null;
+  const want = r.type === 'D' ? r.place : r.place;
+  const list = fa.flights.filter(f => (r.type === 'D' ? f.to === want : f.from === want));
+  const day = r.schedDate;
+  return list.find(f => (r.type === 'D' ? (f.depSched || '') : (f.arrSched || '')).startsWith(day)) || null;
+}
+
+function flightBlock(r, al, fa){
   const dep = r.type === 'D';
   const term = r.terminal === '1' ? 'T1' : (r.terminal === '2' ? 'T2' : '—');
   const late = r.estTime && r.estTime !== r.schedTime;
   const ref = r.source && r.source !== 'live';
-  const tg = term + ' - ' + (r.gate || (ref ? '當天公布' : '未公布'));
-  const tiles = dep
-    ? [[ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? r.counter + ' 號' : '—', true], ['航廈・登機門', tg, false, r.gate ? false : true]]
-    : [[ref ? '行李轉盤（參考）' : '行李轉盤', r.carousel ? parseInt(r.carousel,10) + ' 號' : '—', true], ['航廈・抵達門', term + ' - ' + (r.gate || '—')]];
+  const f = faFor(fa, r);
+  let tiles;
+  if(dep){
+    const bt = boardTime(late ? r.estTime : r.schedTime);
+    const bag = f && f.baggage ? f.baggage : '';
+    tiles = [
+      [ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? r.counter + ' 號' : '—', true],
+      ['航廈・登機門', term + ' - ' + (r.gate || (ref ? '當天公布' : '未公布')), false, !r.gate],
+      ['登機時間（約）', bt || '—'],
+      [esc(r.placeZh) + ' 行李轉盤', bag ? bag + ' 號' : (fa ? '尚未公布' : '—'), false, !bag]
+    ];
+  }else{
+    const ot = f ? (f.termOrigin ? f.termOrigin + ' - ' : '') + (f.gateOrigin || '—') : '—';
+    const od = f && f.depSched ? boardTime(f.depSched.slice(11,16)) : '';
+    tiles = [
+      ['報到櫃台', '—', true, true],
+      ['航廈・登機門', ot, false, ot === '—'],
+      ['登機時間（約）', od || '—'],
+      [ref ? '桃園行李轉盤（參考）' : '桃園行李轉盤', r.carousel ? parseInt(r.carousel,10) + ' 號' : '—']
+    ];
+  }
+  const typeTxt = r.aircraft || (f && f.aircraft) || '';
   return `<div class="fcard">
     <div class="f-top"><span class="f-title">${dep ? '出發' : '抵達'}　${esc(r.flightNo)}</span><span class="pill ${pillClass(r.status)}">${esc(r.status)}</span></div>
     <div class="route">${dep ? '桃園 → ' + esc(r.placeZh) : esc(r.placeZh) + ' → 桃園'}</div>
-    <div class="ftime">${esc(al.name)}・${dep ? '起飛' : '抵達'} ${esc(r.schedTime)}${late ? '　<b>預計 ' + esc(r.estTime) + '</b>' : ''}</div>
+    <div class="ftime">${esc(al.name)}${typeTxt ? '．' + esc(typeTxt) : ''}</div>
+    <div class="ftime">${dep ? '起飛' : '抵達'} ${esc(r.schedTime)}${late ? '　<b>預計 ' + esc(r.estTime) + '</b>' : ''}</div>
     <div class="tiles">${tiles.map(t => `<div class="tile${t[2] ? ' hl' : ''}"><div class="k">${t[0]}</div><div class="v${t[3] ? ' s' : ''}">${esc(t[1])}</div></div>`).join('')}</div>
-    ${r.aircraft ? `<div class="note">機型 ${esc(r.aircraft)}</div>` : ''}
+    ${dep && !fa ? '<div class="note">日本機場的行李轉盤，FlightAware 開通後會自動顯示</div>' : ''}
   </div>`;
 }
 
