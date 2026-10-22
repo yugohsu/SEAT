@@ -1127,22 +1127,22 @@ function flightBlock(r, al, fa){
     const bag = f && f.baggage ? f.baggage : '';
     tiles = [
       [ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? r.counter + ' 號' : '—', true],
-      ['航廈・登機門', term + ' - ' + (r.gate || (ref ? '當天公布' : '未公布')), false, !r.gate],
+      ['航廈・登機門', term + '．' + (r.gate || (ref ? '當天公布' : '未公布')), false, !r.gate],
       ['登機時間', bt || '—'],
-      ['行李轉盤', bag ? bag + ' 號' : (fa ? '尚未公布' : '—'), false, !bag]
+      ['行李轉盤', bag ? bag : (fa ? '尚未公布' : '—'), false, !bag]
     ];
   }else{
     const j = r.jp || null;
     const jt = j ? (j.terminal || '') : (f && f.termOrigin ? f.termOrigin : '');
     const jg = (j && j.gate) || (f && f.gateOrigin) || '';
-    const ot = (jt || jg) ? (jt ? jt + ' - ' : '') + (jg || '未公布') : '—';
+    const ot = (jt || jg) ? (jt ? jt + '．' : '') + (jg || '未公布') : '—';
     const jdep = r.depEst || r.depTime || '';
     const od = boardTime(jdep);
     tiles = [
       ['報到櫃台', (j && j.counter) || (f && f.counterOrigin) || '—', true, !((j && j.counter) || (f && f.counterOrigin))],
       ['航廈・登機門', ot, false, ot === '—' || !jg],
       ['登機時間', od || '—'],
-      [ref ? '行李轉盤（參考）' : '行李轉盤', r.carousel ? parseInt(r.carousel,10) + ' 號' : '—']
+      [ref ? '行李轉盤（參考）' : '行李轉盤', r.carousel ? String(parseInt(r.carousel,10)) : '—']
     ];
   }
   const typeTxt = r.aircraft || (f && f.aircraft) || '';
