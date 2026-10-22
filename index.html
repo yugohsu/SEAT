@@ -78,6 +78,8 @@ select{font-size:17px;}
 .route{font-size:26px;font-weight:900;margin:8px 0 2px;}
 .ftime{font-size:17px;color:var(--ink2);}
 .ftime b{color:var(--warn);}
+.t-late{color:#c0392b;font-weight:900;}
+.t-early{color:#1f5fbf;font-weight:900;}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
 .tile{background:var(--tan);border-radius:18px;padding:12px 14px;}
 .tile .k{font-size:14px;color:var(--tan-ink);font-weight:900;opacity:.85;}
@@ -1071,15 +1073,24 @@ function faFor(fa, r){
   return list.find(f => (r.type === 'D' ? (f.depSched || '') : (f.arrSched || '')).startsWith(day)) || null;
 }
 
-/* 起飛　抵達　飛行時間（有延誤就顯示預計時間） */
+/* 10:10 10:11 → 15:10 14:57　飛行 4小時（預計時間：晚了紅色、早了藍色） */
 function timesHtml(r){
   const dep = r.type === 'D';
   const d = r.depTime || (dep ? r.schedTime : '');
   const a = r.arrTime || (dep ? '' : r.schedTime);
-  const de = r.depEst || '', ae = r.arrEst || '';
-  const part = (k, t, e) => t ? `${k} ${esc(t)}${e ? ' <b>→' + esc(e) + '</b>' : ''}` : '';
+  const toM = t => { const x = String(t||'').match(/^(\d{1,2}):(\d{2})/); return x ? (+x[1])*60 + (+x[2]) : null; };
+  const one = (t, e) => {
+    if(!t) return '';
+    let h = esc(t);
+    if(e && e !== t && toM(e) !== null && toM(t) !== null){
+      const diff = (toM(e) - toM(t) + 1440) % 1440;
+      h += ` <span class="${diff > 720 ? 't-early' : 't-late'}">${esc(e)}</span>`;
+    }
+    return h;
+  };
+  const left = one(d, r.depEst), right = one(a, r.arrEst);
   const fly = r.flyMins ? `飛行 ${Math.floor(r.flyMins/60)}小時${r.flyMins%60 ? (r.flyMins%60) + '分' : ''}` : '';
-  return [part('起飛', d, de), part('抵達', a, ae), fly].filter(Boolean).join('　');
+  return [left && right ? left + ' → ' + right : (left || right), fly].filter(Boolean).join('　');
 }
 
 function flightBlock(r, al, fa){
