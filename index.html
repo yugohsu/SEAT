@@ -86,6 +86,8 @@ select{font-size:17px;}
 .tile.hl{background:var(--ink);} .tile.hl .k{color:#d9c7a6;} .tile.hl .v{color:#fff;}
 
 .note{font-size:16px;color:var(--muted);margin-top:10px;}
+.note a,.links a{color:var(--ink);font-weight:800;text-decoration:underline;}
+.links{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:16px;margin-top:10px;}
 .msg{border-radius:16px;padding:12px 14px;font-size:17px;margin-top:14px;}
 .msg.warn{background:var(--warn-bg);color:var(--warn);} .msg.bad{background:var(--bad-bg);color:var(--bad);} .msg.blue{background:var(--blue-bg);color:var(--blue);}
 
@@ -1027,10 +1029,30 @@ async function searchFlight(){
 
   const r0 = rows[0];
   if(r0){
+    h += linksHtml(flight, r0);
     if(JP[r0.place]) h += jpBlock(r0.place, m[1]);
     h += `<div class="note">更新：${esc(data.fetchedAt || '')}・${data.mode === 'live' ? '桃園機場即時資料' : (data.mode === 'timetable' ? '桃園機場時刻表' : '推估')}</div>`;
   }
   box.innerHTML = h;
+}
+
+/* 查證連結：各官方網站和 FlightAware、Google */
+const JP_FIDS_URL = {
+  KIX: 'https://www.kansai-airport.or.jp/flight/search?direction=DEP',
+  UKB: 'https://www.kairport.co.jp/flight/search?direction=DEP',
+  NGO: 'https://www.centrair.jp/flight/search/',
+  NRT: 'https://www.narita-airport.jp/ja/flight/dep-search/',
+  CTS: 'https://www.hokkaido-airports.com/ja/new-chitose/',
+  AKJ: 'https://www.hokkaido-airports.com/ja/asahikawa/'
+};
+function linksHtml(flight, r){
+  const a = [
+    ['桃園機場', 'https://www.taoyuan-airport.com/'],
+    JP_FIDS_URL[r.place] ? [(JP[r.place] ? JP[r.place].name : r.place) + '官網', JP_FIDS_URL[r.place]] : null,
+    ['FlightAware', 'https://www.flightaware.com/live/flight/' + encodeURIComponent(flight)],
+    ['Google', 'https://www.google.com/search?q=' + encodeURIComponent(flight + ' 航班')]
+  ].filter(Boolean);
+  return `<div class="links"><span class="muted">查證：</span>${a.map(x => `<a href="${x[1]}" target="_blank" rel="noopener">${esc(x[0])}</a>`).join('')}</div>`;
 }
 
 function pillClass(s){ return /取消/.test(s) ? 'bad' : (/延|更改|變更|預估/.test(s) ? 'warn' : (/時刻表/.test(s) ? 'info' : 'ok')); }
@@ -1090,8 +1112,8 @@ function flightBlock(r, al, fa){
     <div class="ftime">${dep ? '起飛' : '抵達'} ${esc(r.schedTime)}${late ? '　<b>預計 ' + esc(r.estTime) + '</b>' : ''}</div>
     <div class="tiles">${tiles.map(t => `<div class="tile${t[2] ? ' hl' : ''}"><div class="k">${t[0]}</div><div class="v${t[3] ? ' s' : ''}">${esc(t[1])}</div></div>`).join('')}</div>
     ${dep && !fa ? '<div class="note">日本機場的行李轉盤，FlightAware 開通後會自動顯示</div>' : ''}
-    ${!dep && r.jp ? `<div class="note">${esc(r.placeZh)}起飛 ${esc(r.jp.estTime || r.jp.depTime || '—')}${r.jp.checkin ? '．' + esc(r.jp.checkin) + ' 開始報到' : ''}（日本機場官方）</div>` : ''}
-    ${!dep && !r.jp && !fa ? '<div class="note">日本端資料：關西可查今明兩天、新千歲只能查當天</div>' : ''}
+    ${!dep && r.jp ? `<div class="note">${esc(r.placeZh)}起飛 ${esc(r.jp.estTime || r.jp.depTime || '—')}${r.jp.checkin ? '．' + esc(r.jp.checkin) + ' 開始報到' : ''}．資料來源 <a href="${esc(r.jp.url)}" target="_blank" rel="noopener">${esc(r.jp.src)}</a></div>` : ''}
+    ${!dep && !r.jp ? '<div class="note">日本機場官網還沒公布這天的櫃台和登機門（成田、中部、關西約前一天，新千歲、旭川當天）</div>' : ''}
   </div>`;
 }
 
