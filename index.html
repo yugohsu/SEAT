@@ -1089,7 +1089,7 @@ function flightBlock(r, al, fa){
     const jdep = r.depEst || r.depTime || '';
     const od = boardTime(jdep);
     tiles = [
-      ['報到櫃台', (j && j.counter) || '—', true, !(j && j.counter)],
+      ['報到櫃台', (j && j.counter) || (f && f.counterOrigin) || '—', true, !((j && j.counter) || (f && f.counterOrigin))],
       ['航廈・登機門', ot, false, ot === '—' || !jg],
       ['登機時間', od || '—'],
       [ref ? '行李轉盤（參考）' : '行李轉盤', r.carousel ? parseInt(r.carousel,10) + ' 號' : '—']
@@ -1102,7 +1102,6 @@ function flightBlock(r, al, fa){
     <div class="ftime">${esc(al.name)}${typeTxt ? '．' + esc(typeTxt) : ''}</div>
     <div class="ftime">${timesHtml(r)}</div>
     <div class="tiles">${tiles.map(t => `<div class="tile${t[2] ? ' hl' : ''}"><div class="k">${t[0]}</div><div class="v${t[3] ? ' s' : ''}">${esc(t[1])}</div></div>`).join('')}</div>
-    ${dep && !fa ? '<div class="note">日本機場的行李轉盤，FlightAware 開通後會自動顯示</div>' : ''}
     ${!dep && r.jp && r.jp.checkin ? `<div class="note">${esc(r.jp.checkin)} 開始報到</div>` : ''}
     ${!dep && !r.jp ? '<div class="note">日本的櫃台和登機門，出發前一天到當天公布</div>' : ''}
   </div>`;
