@@ -1005,7 +1005,16 @@ async function searchFlight(){
   const api = apiUrl();
   if(!api){ box.innerHTML = `<div class="msg blue">請先按右上角「設定」貼上即時資料網址</div>`; return; }
 
+  // 先秒顯示上次查到的結果，背景再更新
+  const ck = 'fr_' + flight + '_' + date;
+  let shown = false;
+  try{
+    const old = JSON.parse(localStorage.getItem(ck) || 'null');
+    if(old && Date.now() - old.t < 6 * 3600 * 1000){ renderFlight(old.d, flight, date, m, true); shown = true; }
+  }catch(e){}
+
   const btn = $('searchBtn'); btn.disabled = true; btn.innerText = '查詢中…';
+  if(!shown) box.innerHTML = `<div class="msg blue">查詢中，第一次查會比較久…</div>`;
   let data;
   try{
     const r = await fetch(api + (api.includes('?') ? '&' : '?') + 'flight=' + encodeURIComponent(flight) + '&date=' + encodeURIComponent(date), {cache:'no-store'});
@@ -1013,6 +1022,13 @@ async function searchFlight(){
   }catch(e){ data = {ok:false, error:'連不到即時資料，請檢查網路或網址'}; }
   btn.disabled = false; btn.innerText = '查詢';
 
+  if(!data.ok && shown){ const u = $('fUpd'); if(u) u.innerText = '更新失敗，顯示的是上次的資料'; return; }
+  if(data.ok){ try{ localStorage.setItem(ck, JSON.stringify({t: Date.now(), d: data})); }catch(e){} }
+  renderFlight(data, flight, date, m, false);
+}
+
+function renderFlight(data, flight, date, m, stale){
+  const box = $('flightResult');
   if(!data.ok){ box.innerHTML = `<div class="msg bad">${esc(data.error || '查詢失敗')}</div>`; return; }
   const rows = (data.rows || []).filter(r => r.schedDate === date);
   const al = AIRLINES[m[1]] || {name:m[1], close:'以航空公司官網為準'};
@@ -1030,9 +1046,10 @@ async function searchFlight(){
   const r0 = rows[0];
   if(r0){
     if(JP[r0.place]) h += jpBlock(r0.place, m[1]);
-    h += `<div class="note">更新：${esc(data.fetchedAt || '')}・${data.mode === 'live' ? '桃園機場即時資料' : (data.mode === 'timetable' ? '桃園機場時刻表' : '推估')}</div>`;
+    h += `<div class="note" id="fUpd">${stale ? '更新中…' : '更新：' + esc(data.fetchedAt || '')}</div>`;
   }
   box.innerHTML = h;
+  refreshApChecks && refreshApChecks();
 }
 
 function pillClass(s){ return /取消/.test(s) ? 'bad' : (/延|更改|變更|預估/.test(s) ? 'warn' : (/時刻表/.test(s) ? 'info' : 'ok')); }
