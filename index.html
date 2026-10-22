@@ -170,22 +170,6 @@ select{font-size:17px;}
     </div>
   </section>
 
-  <!-- ===== 日本機場 ===== -->
-  <section class="sec" id="secAirport">
-    <div class="sec-head" onclick="toggleSec('secAirport')">
-      <h2>日本機場</h2><div class="chev"></div>
-    </div>
-    <div class="sec-body">
-      <div class="field-row">
-        <div><div class="fl">機場</div><select id="apSel" onchange="showAirport()"></select></div>
-        <div><div class="fl">航空公司</div><select id="apAirline" onchange="store('ap_airline',this.value);showAirport()">
-          <option value="JX">星宇</option><option value="CI">華航</option><option value="BR">長榮</option><option value="IT">虎航</option>
-        </select></div>
-      </div>
-      <div id="apBox"></div>
-    </div>
-  </section>
-
   <!-- ===== 座位 ===== -->
   <section class="sec" id="secSeat">
     <div class="sec-head" onclick="toggleSec('secSeat')">
@@ -1178,21 +1162,8 @@ async function loadApStatus(){
 
 function jpBlock(code, airline){ return `<div class="info">${airportHtml(code, airline)}</div>`; }
 
-function showAirport(){
-  const code = $('apSel').value;
-  store('ap_last', code);
-  $('apBox').innerHTML = code ? airportHtml(code, $('apAirline').value) : '';
-}
-
-(function initAirport(){
-  const sel = $('apSel');
-  sel.innerHTML = Object.keys(JP).map(k => `<option value="${k}">${JP[k].name}</option>`).join('');
-  const last = load('ap_last'); if(last && JP[last]) sel.value = last;
-  const al = load('ap_airline'); if(al) $('apAirline').value = al;
-  if(load('tb_secAirport') === '0') $('secAirport').classList.add('closed');
-  showAirport();
-  loadApStatus();
-})();
+// 查航班時會自動附上日本機場資訊；這裡先讀取官方地圖比對結果
+loadApStatus();
 
 </script>
 </body>
