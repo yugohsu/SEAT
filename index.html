@@ -74,7 +74,7 @@ select{font-size:17px;}
 .f-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
 .f-title{font-size:22px;font-weight:900;}
 .pill{display:inline-block;border-radius:999px;padding:5px 14px;font-size:17px;font-weight:900;}
-.pill.ok{background:var(--ok-bg);color:var(--ok);} .pill.warn{background:var(--warn-bg);color:var(--warn);} .pill.bad{background:var(--bad-bg);color:var(--bad);}
+.pill.ok{background:var(--ok-bg);color:var(--ok);} .pill.info{background:var(--blue-bg);color:var(--blue);} .pill.warn{background:var(--warn-bg);color:var(--warn);} .pill.bad{background:var(--bad-bg);color:var(--bad);}
 .route{font-size:26px;font-weight:900;margin:8px 0 2px;}
 .ftime{font-size:17px;color:var(--ink2);}
 .ftime b{color:var(--warn);}
@@ -132,6 +132,12 @@ select{font-size:17px;}
 .sheet h2{margin:0 0 14px;font-size:24px;font-weight:900;}
 .sheet .fl{margin-top:12px;}
 .sheet input{font-size:16px;}
+.ap-head{font-size:22px;font-weight:900;margin:4px 0 6px;}
+.ap-area{font-size:19px;font-weight:900;margin:14px 0 2px;color:var(--tan-ink);}
+.ap-order{font-size:16px;color:var(--ink2);margin:0 0 8px 2px;}
+.muted{font-size:14px;color:var(--muted);}
+.rv div+div{margin-top:4px;}
+.ap-note{font-size:17px;min-height:70px;margin-top:2px;}
 .hidden{display:none !important;}
 </style>
 </head>
@@ -158,6 +164,22 @@ select{font-size:17px;}
       </div>
       <button class="btn" id="searchBtn" onclick="searchFlight()">查詢</button>
       <div id="flightResult"></div>
+    </div>
+  </section>
+
+  <!-- ===== 日本機場 ===== -->
+  <section class="sec" id="secAirport">
+    <div class="sec-head" onclick="toggleSec('secAirport')">
+      <h2>日本機場</h2><div class="chev"></div>
+    </div>
+    <div class="sec-body">
+      <div class="field-row">
+        <div><div class="fl">機場</div><select id="apSel" onchange="showAirport()"></select></div>
+        <div><div class="fl">航空公司</div><select id="apAirline" onchange="store('ap_airline',this.value);showAirport()">
+          <option value="JX">星宇</option><option value="CI">華航</option><option value="BR">長榮</option><option value="IT">虎航</option>
+        </select></div>
+      </div>
+      <div id="apBox"></div>
     </div>
   </section>
 
@@ -920,47 +942,52 @@ const AIRLINES = {
   MM:{name:'樂桃航空', icao:'APJ', close:'以樂桃官網為準'}
 };
 
-/* 桃園機場（官網設施資料，2026/10/21 查證） */
-const TPE = {
-  '1': [
-    ['電子秤','官網未公布，請在報到櫃台秤重'],
-    ['打包','宅配通 1F・24 小時'],
-    ['換匯','臺銀 1F 05:00–21:20・兆豐 1F 05:30–22:00'],
-    ['網卡','飛買家 3F・游客邦 1F・各電信 1F'],
-    ['哺乳室','出境後 2F、3F、4F']
-  ],
-  '2': [
-    ['電子秤','官網未公布，請在報到櫃台秤重'],
-    ['打包','宅配通 3F 06:00–23:30・1F 24 小時'],
-    ['換匯','臺銀 3F 05:30–22:20・兆豐 3F 05:30–22:50'],
-    ['網卡','飛買家 3F・中華電信 3F'],
-    ['哺乳室','出境後 2F、3F、4F']
-  ]
-};
-
-/* 日本機場（各機場官網，2026/10/21 查證） */
+/* 日本機場：出發層位置（各機場官方地圖資料，2026/10/22 查證）
+   前方＝入口那一側，後方＝往安檢口那一側 */
 const JP = {
-  NRT:{name:'成田', term:{BR:'第 1 航廈',CI:'第 2 航廈',JX:'第 2 航廈',IT:'第 2 航廈',MM:'第 1 航廈'},
-    scale:'官網未公布，請在報到櫃台秤重',
-    links:[['出發航班','https://www.narita-airport.jp/ja/flight/dep-search/'],['抵達航班','https://www.narita-airport.jp/ja/flight/arr-search/'],['機場地圖','https://www.narita-airport.jp/ja/map/']]},
-  HND:{name:'羽田', term:{'*':'第 3 航廈（出發 3F）'},
-    scale:'官網未公布，請在報到櫃台秤重',
-    links:[['國際線航班','https://tokyo-haneda.com/flight/flightInfo_int.html'],['T3 地圖','https://tokyo-haneda.com/floor/floor-guide.html?area=9&tab=terminal3']]},
-  KIX:{name:'關西', term:{'*':'第 1 航廈'},
-    scale:'官網未公布，請在報到櫃台秤重',
-    links:[['出發航班','https://www.kansai-airport.or.jp/flight/search?direction=DEP'],['抵達航班','https://www.kansai-airport.or.jp/flight/search?direction=ARR'],['機場地圖','https://www.kansai-airport.or.jp/map']]},
-  CTS:{name:'新千歲', term:{'*':'國際線航廈'},
-    scale:'國際線 3F 有免費行李秤', scaleGood:true,
-    links:[['電子秤位置','https://www.hokkaido-airports.com/ja/new-chitose/floormap/international/?category=baggage-scales&floor=3F'],['今日航班','https://www.hokkaido-airports.com/ja/new-chitose/airport/fis/?initial']]},
-  FUK:{name:'福岡', term:{'*':'國際線航廈'},
-    scale:'官網未公布，請在報到櫃台秤重',
-    links:[['航班查詢','https://www.fukuoka-airport.jp/flight/'],['國際線地圖','https://www.fukuoka-airport.jp/map/index.html?floor_id=int']]},
-  NGO:{name:'中部', term:{'*':'第 1 航廈', CI:'第 1 航廈 H 櫃台'},
-    scale:'官網未公布，請在報到櫃台秤重',
-    links:[['中部機場','https://www.centrair.jp/tzh/']]},
-  OKA:{name:'那霸', term:{'*':'國際線'},
-    scale:'官網未公布，請在報到櫃台秤重',
-    links:[['今日航班','https://www.naha-airport.co.jp/flight/today?I_type=DEPARTED'],['樓層地圖','https://www.naha-airport.co.jp/spend/map/']]}
+  CTS:{name:'新千歲', area:'國際線航廈 3F', term:{'*':'國際線航廈'},
+    order:'A　B　｜出發口｜　C　D',
+    scale:['A 櫃台外側（A 那一端）前方','B 櫃台前方（靠出發口那側）','C 櫃台前方（靠出發口那側）','D 櫃台前方'],
+    scaleNote:'每區各一台，免費，官方說明結果僅供參考',
+    toilet:['A 櫃台外側前方','B 櫃台前方（靠出發口那側）','B 與出發口中間的前方','C 櫃台前方（靠出發口那側）','D 櫃台外側前方'],
+    elev:['A 櫃台前方（入口旁）','A、B 中間前方（往連絡通道）','B 與出發口中間','C 櫃台旁（靠出發口那側）'],
+    links:[['官方地圖','https://www.hokkaido-airports.com/ja/new-chitose/floormap/international/?category=baggage-scales&floor=3F'],['今日航班','https://www.hokkaido-airports.com/ja/new-chitose/airport/fis/?initial']]},
+  KIX:{name:'關西', area:'第 1 航廈 4F', term:{'*':'第 1 航廈 4F'},
+    order:'A　B　C　D　E　F　G　H',
+    scale:[], scaleNote:'官方地圖沒有標示電子秤',
+    toilet:['C、D 中間的後方','E、F 中間的後方'],
+    elev:['C 櫃台後方','F 櫃台後方','D、E 中間前方（輪椅優先）','F、G 中間前方'],
+    links:[['官方地圖','https://www.kansai-airport.or.jp/map'],['出發航班','https://www.kansai-airport.or.jp/flight/search?direction=DEP']]},
+  NRT:{name:'成田', area:'', term:{BR:'第 1 航廈 南翼 4F', CI:'第 2 航廈 3F', JX:'第 2 航廈 3F', IT:'第 2 航廈 3F', '*':'依航空公司'},
+    byTerm:{
+      T1:{area:'第 1 航廈 南翼 4F（長榮）', order:'A → J',
+        scale:[], scaleNote:'官方地圖沒有標示電子秤',
+        toilet:['A 櫃台外側後方','H 櫃台後方','J 櫃台外側後方'],
+        elev:['A 櫃台前方','B 櫃台後方','F 櫃台後方','G、H 中間前方','J 櫃台外側後方']},
+      T2:{area:'第 2 航廈 3F（華航、星宇、虎航）', order:'A → S',
+        scale:[], scaleNote:'官方地圖沒有標示電子秤',
+        toilet:['A、B 中間的後方','D 櫃台後方','O、P 中間的後方','R、S 中間的後方'],
+        elev:['A 櫃台前方','C 櫃台前方','D、E 中間後方','I、J 中間前方','K 櫃台前方','O 櫃台後方','S 櫃台前方']}
+    },
+    links:[['官方地圖','https://www.narita-airport.jp/ja/map/'],['出發航班','https://www.narita-airport.jp/ja/flight/dep-search/']]},
+  NGO:{name:'中部', area:'第 1 航廈 3F 國際線', term:{'*':'第 1 航廈 3F'},
+    order:'A/B　C/D　E/F　G/H　I/J',
+    scale:['E/F 和 G/H 中間的前方（入口那面牆，電梯旁）'], scaleNote:'',
+    toilet:['A/B 後方（保安檢查場左邊）','E/F 和 G/H 中間的後方','I/J 後方'],
+    elev:['E/F 和 G/H 中間前方（電子秤旁）','C/D 和 E/F 中間後方（Anker Store 旁）'],
+    links:[['官方地圖','https://www.centrair.jp/map/']]},
+  UKB:{name:'神戶', area:'第 2 航廈 1F', term:{'*':'第 2 航廈'},
+    order:'報到櫃台在資訊中心旁',
+    scale:[], scaleNote:'官方地圖沒有標示電子秤',
+    toilet:['報到櫃台旁（資訊中心那一側）','Lounge KOBE 旁'],
+    elev:['報到大廳，大和運輸行李櫃台旁'],
+    links:[['官方地圖','https://www.kairport.co.jp/map']]},
+  AKJ:{name:'旭川', area:'1F 國際線', term:{'*':'1F 國際線'},
+    order:'國際線報到櫃台一整排（1F 國際線那一側）',
+    scale:[], scaleNote:'官方地圖沒有標示電子秤',
+    toilet:['報到櫃台最旁邊（國際線那一端），兩處'],
+    elev:['廁所後面（國際線行李提領處旁）'],
+    links:[['官方地圖','https://www.hokkaido-airports.com/ja/asahikawa/floormap/']]}
 };
 
 function todayTW(){
@@ -992,7 +1019,7 @@ async function searchFlight(){
   const btn = $('searchBtn'); btn.disabled = true; btn.innerText = '查詢中…';
   let data;
   try{
-    const r = await fetch(api + (api.includes('?') ? '&' : '?') + 'flight=' + encodeURIComponent(flight), {cache:'no-store'});
+    const r = await fetch(api + (api.includes('?') ? '&' : '?') + 'flight=' + encodeURIComponent(flight) + '&date=' + encodeURIComponent(date), {cache:'no-store'});
     data = await r.json();
   }catch(e){ data = {ok:false, error:'連不到即時資料，請檢查網路或網址'}; }
   btn.disabled = false; btn.innerText = '查詢';
@@ -1003,31 +1030,32 @@ async function searchFlight(){
   let h = '';
 
   if(!rows.length){
-    const avail = data.availableDates || [];
-    h += avail.includes(date)
-      ? `<div class="msg warn">${md(date)} 桃園沒有 ${esc(flight)} 這班</div>`
-      : `<div class="msg warn">官方資料只到 ${esc(md(avail[avail.length-1] || date))}，${md(date)} 前一天再查</div>`;
+    h += `<div class="msg warn">${md(date)} 查不到 ${esc(flight)}，請確認航班號和日期</div>`;
+  }else if(data.mode === 'timetable'){
+    h += `<div class="msg blue">依桃園機場時刻表・登機門當天公布</div>`;
+  }else if(data.mode === 'estimate'){
+    h += `<div class="msg warn">時刻表還沒公布，依最近一班推估，出發前一天再查一次</div>`;
   }
   rows.forEach(r => h += flightBlock(r, al));
 
   const r0 = rows[0];
   if(r0){
-    h += tpeBlock(r0.terminal, al);
-    if(JP[r0.place]) h += jpBlock(JP[r0.place], m[1]);
-    h += `<div class="note">更新：${esc(data.fetchedAt || '')}・桃園機場官方即時資料</div>`;
+    if(JP[r0.place]) h += jpBlock(r0.place, m[1]);
+    h += `<div class="note">更新：${esc(data.fetchedAt || '')}・${data.mode === 'live' ? '桃園機場即時資料' : (data.mode === 'timetable' ? '桃園機場時刻表' : '推估')}</div>`;
   }
   box.innerHTML = h;
 }
 
-function pillClass(s){ return /取消/.test(s) ? 'bad' : (/延|更改|變更/.test(s) ? 'warn' : 'ok'); }
+function pillClass(s){ return /取消/.test(s) ? 'bad' : (/延|更改|變更|預估/.test(s) ? 'warn' : (/時刻表/.test(s) ? 'info' : 'ok')); }
 
 function flightBlock(r, al){
   const dep = r.type === 'D';
   const term = r.terminal === '1' ? 'T1' : (r.terminal === '2' ? 'T2' : '—');
   const late = r.estTime && r.estTime !== r.schedTime;
+  const ref = r.source && r.source !== 'live';
   const tiles = dep
-    ? [['報到櫃台', r.counter ? r.counter + ' 號' : '—', true], ['登機門', r.gate || '未公布'], ['航廈', term], ['機型', r.aircraft || '—', false, true]]
-    : [['行李轉盤', r.carousel ? parseInt(r.carousel,10) + ' 號' : '—', true], ['抵達門', r.gate || '—'], ['航廈', term], ['機型', r.aircraft || '—', false, true]];
+    ? [[ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? r.counter + ' 號' : '—', true], ['登機門', r.gate || (ref ? '當天公布' : '未公布')], ['航廈', term], ['機型', r.aircraft || '—', false, true]]
+    : [[ref ? '行李轉盤（參考）' : '行李轉盤', r.carousel ? parseInt(r.carousel,10) + ' 號' : '—', true], ['抵達門', r.gate || '—'], ['航廈', term], ['機型', r.aircraft || '—', false, true]];
   return `<div class="fcard">
     <div class="f-top"><span class="f-title">${dep ? '出發' : '抵達'}　${esc(r.flightNo)}</span><span class="pill ${pillClass(r.status)}">${esc(r.status)}</span></div>
     <div class="route">${dep ? '桃園 → ' + esc(r.placeZh) : esc(r.placeZh) + ' → 桃園'}</div>
@@ -1040,22 +1068,51 @@ function rowsHtml(list){
   return `<div class="rows">${list.map(x => `<div class="r"><div class="rk">${x[0]}</div><div class="rv${x[2] ? ' good' : ''}">${esc(x[1])}</div></div>`).join('')}</div>`;
 }
 
-function tpeBlock(term, al){
-  const list = (TPE[term] || TPE['1']).slice();
-  list.push(['行動電源','每人 2 個・只能手提・機上禁充電']);
-  list.push(['關櫃', al.close]);
-  return `<div class="info"><h3>桃園 ${term === '2' ? '第二' : '第一'}航廈</h3>${rowsHtml(list)}</div>`;
+function lines(arr){ return arr.length ? arr.map(x => `<div>${esc(x)}</div>`).join('') : '<div class="muted">—</div>'; }
+
+function airportHtml(code, airline){
+  const a = JP[code]; if(!a) return '';
+  let blocks = [];
+  if(a.byTerm){
+    const t = (airline === 'BR') ? ['T1'] : (['CI','JX','IT'].includes(airline) ? ['T2'] : ['T1','T2']);
+    blocks = t.map(k => a.byTerm[k]);
+  }else{
+    blocks = [a];
+  }
+  const note = load('ap_note_' + code) || '';
+  return `<div class="ap">
+    <div class="ap-head">${esc(a.name)}機場</div>
+    ${blocks.map(b => `
+      <div class="ap-area">${esc(b.area)}</div>
+      <div class="ap-order">櫃台順序：${esc(b.order)}</div>
+      <div class="rows">
+        <div class="r"><div class="rk">電子秤</div><div class="rv${b.scale.length ? ' good' : ''}">${b.scale.length ? lines(b.scale) : esc(b.scaleNote)}${b.scale.length && b.scaleNote ? `<div class="muted">${esc(b.scaleNote)}</div>` : ''}</div></div>
+        <div class="r"><div class="rk">廁所</div><div class="rv">${lines(b.toilet)}</div></div>
+        <div class="r"><div class="rk">電梯</div><div class="rv">${lines(b.elev)}</div></div>
+      </div>`).join('')}
+    <div class="muted" style="margin-top:8px;">前方＝入口那一側，後方＝往安檢口那一側</div>
+    <div class="fl" style="margin-top:12px;">領隊筆記</div>
+    <textarea class="ap-note" data-code="${code}" placeholder="例：秤在 C 櫃台對面柱子旁" oninput="store('ap_note_'+this.dataset.code,this.value)">${esc(note)}</textarea>
+    <div class="links">${a.links.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div>
+  </div>`;
 }
 
-function jpBlock(a, airline){
-  const list = [
-    ['航廈', a.term[airline] || a.term['*']],
-    ['電子秤', a.scale, a.scaleGood],
-    ['即時', '日本機場請點下方官方頁面']
-  ];
-  return `<div class="info"><h3>${esc(a.name)}機場</h3>${rowsHtml(list)}
-    <div class="links">${a.links.map(l => `<a href="${l[1]}" target="_blank" rel="noopener">${esc(l[0])}</a>`).join('')}</div></div>`;
+function jpBlock(code, airline){ return `<div class="info">${airportHtml(code, airline)}</div>`; }
+
+function showAirport(){
+  const code = $('apSel').value;
+  store('ap_last', code);
+  $('apBox').innerHTML = code ? airportHtml(code, $('apAirline').value) : '';
 }
+
+(function initAirport(){
+  const sel = $('apSel');
+  sel.innerHTML = Object.keys(JP).map(k => `<option value="${k}">${JP[k].name}</option>`).join('');
+  const last = load('ap_last'); if(last && JP[last]) sel.value = last;
+  const al = load('ap_airline'); if(al) $('apAirline').value = al;
+  if(load('tb_secAirport') === '0') $('secAirport').classList.add('closed');
+  showAirport();
+})();
 
 </script>
 </body>
