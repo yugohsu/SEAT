@@ -1129,7 +1129,7 @@ function flightBlock(r, al, fa){
     const bt = boardTime(late ? r.estTime : r.schedTime);
     const bag = f && f.baggage ? f.baggage : '';
     tiles = [
-      [ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? r.counter + ' 號' : '—', true],
+      [ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? String(r.counter) : '—', true],
       ['航廈・登機門', term + '．' + (r.gate || (ref ? '當天公布' : '未公布')), false, !r.gate],
       ['登機時間', bt || '—'],
       ['行李轉盤', bag ? bag : (fa ? '尚未公布' : '—'), false, !bag]
