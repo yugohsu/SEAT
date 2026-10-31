@@ -112,6 +112,7 @@ select{font-size:17px;}
 .tile.hl{background:linear-gradient(160deg,#16337f,#2450bd);} .tile.hl .k{color:var(--gold);opacity:1;} .tile.hl .v{color:#fff;}
 
 .note{font-size:16px;color:var(--muted);margin-top:10px;}
+.btn-link{display:block;text-align:center;margin-top:12px;padding:14px;border-radius:999px;background:var(--tan);color:var(--tan-ink);font-size:18px;font-weight:900;text-decoration:none;}
 .note a,.links a{color:var(--ink);font-weight:800;text-decoration:underline;}
 .links{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:16px;margin-top:10px;}
 .msg{border-radius:16px;padding:12px 14px;font-size:17px;margin-top:14px;}
@@ -1118,6 +1119,22 @@ function timesHtml(r){
   return [left && right ? left + ' → ' + right : (left || right), fly].filter(Boolean).join('　');
 }
 
+/* 回程報到櫃台查不到時：直接打開日本機場官網的那一班 */
+function jpCounterLink(r){
+  const f = encodeURIComponent(r.flightNo);
+  const today = new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10).replace(/-/g,'/');
+  const tom = new Date(Date.now() + 33*3600*1000).toISOString().slice(0,10).replace(/-/g,'/');
+  const day = r.schedDate === today ? 'today' : (r.schedDate === tom ? 'tomorrow' : 'today');
+  return ({
+    KIX: `https://www.kansai-airport.or.jp/tw/flight/detail/DEP/INT/1?flight_number=${f}&date=${day}&service_type=PAX`,
+    UKB: `https://www.kairport.co.jp/flight/detail/DEP/INT/2?flight_number=${f}&date=${day}&service_type=PAX`,
+    NGO: 'https://www.centrair.jp/flight/search/',
+    NRT: 'https://www.narita-airport.jp/ja/flight/dep-search/',
+    CTS: 'https://www.hokkaido-airports.com/ja/new-chitose/airport/fis/',
+    AKJ: 'https://www.hokkaido-airports.com/ja/asahikawa/'
+  })[r.place] || '';
+}
+
 function flightBlock(r, al, fa){
   const dep = r.type === 'D';
   const term = r.terminal === '1' ? 'T1' : (r.terminal === '2' ? 'T2' : '—');
@@ -1156,7 +1173,7 @@ function flightBlock(r, al, fa){
     <div class="ftime">${timesHtml(r)}</div>
     <div class="tiles">${tiles.map(t => `<div class="tile${t[2] ? ' hl' : ''}"><div class="k">${t[0]}</div><div class="v${t[3] ? ' s' : ''}">${esc(t[1])}</div></div>`).join('')}</div>
     ${!dep && r.jp && r.jp.checkin ? `<div class="note">${esc(r.jp.checkin)} 開始報到</div>` : ''}
-    ${!dep && !r.jp ? (r.jpErr ? `<div class="note">日本機場官網暫時讀不到（${esc(r.jpErr)}）</div>` : '<div class="note">日本的櫃台和登機門，出發前一天到當天公布</div>') : ''}
+    ${!dep && !(r.jp && r.jp.counter) && jpCounterLink(r) ? `<a class="btn-link" href="${jpCounterLink(r)}" target="_blank" rel="noopener">報到櫃台　看${esc(r.placeZh)}機場官網 ›</a>` : ''}
   </div>`;
 }
 
