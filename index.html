@@ -1139,7 +1139,18 @@ function jpCounterLink(r){
     NGO: 'https://www.centrair.jp/flight/search/',
     NRT: 'https://www.narita-airport.jp/ja/flight/dep-search/',
     CTS: 'https://www.hokkaido-airports.com/ja/new-chitose/airport/fis/',
-    AKJ: 'https://www.hokkaido-airports.com/ja/asahikawa/'
+    AKJ: 'https://www.hokkaido-airports.com/ja/asahikawa/',
+    HND: 'https://tokyo-haneda.com/flight/flightInfo_int.html',
+    FUK: 'https://www.fukuoka-airport.jp/',
+    OKA: 'https://www.naha-airport.co.jp/flight/today/',
+    ICN: 'https://www.airport.kr/ap_ko/869/subview.do',
+    GMP: 'https://www.airport.co.kr/gimpo/cms/frCon/index.do?MENU_ID=1010',
+    PUS: 'https://www.airport.co.kr/gimhae/main.do',
+    SYD: 'https://www.sydneyairport.com.au/flights',
+    MEL: 'https://www.melbourneairport.com.au/flights',
+    BNE: 'https://www.bne.com.au/passenger/flights/arrivals-departures',
+    AKL: 'https://www.aucklandairport.co.nz/flights',
+    CHC: 'https://www.christchurchairport.co.nz/travellers/flights/arrivals-and-departures/'
   })[r.place] || '';
 }
 
@@ -1147,7 +1158,7 @@ function jpCounterLink(r){
 function globalBlock(r, al){
   const name = (AIRLINES[r.airline] && AIRLINES[r.airline].name) || r.airlineName || r.airline;
   const termGate = (r.terminal || r.gate) ? (r.terminal ? r.terminal + '．' : '') + (r.gate || '未公布') : '—';
-  const bt = boardTime(r.depEst || r.depTime);
+  const bt = r.boarding || boardTime(r.depEst || r.depTime);
   const tiles = [
     ['報到櫃台', r.counter ? String(r.counter) : '—', true, !r.counter],
     ['航廈・登機門', termGate, false, termGate === '—' || !r.gate],
@@ -1175,7 +1186,7 @@ function flightBlock(r, al, fa){
   let tiles;
   if(dep){
     const bt = boardTime(late ? r.estTime : r.schedTime);
-    const bag = f && f.baggage ? f.baggage : '';
+    const bag = r.destBaggage || (f && f.baggage ? f.baggage : '');
     tiles = [
       [ref ? '報到櫃台（參考）' : '報到櫃台', r.counter ? String(r.counter) : '—', true],
       ['航廈・登機門', term + '．' + (r.gate || (ref ? '當天公布' : '未公布')), false, !r.gate],
@@ -1188,7 +1199,7 @@ function flightBlock(r, al, fa){
     const jg = (j && j.gate) || (f && f.gateOrigin) || '';
     const ot = (jt || jg) ? (jt ? jt + '．' : '') + (jg || '未公布') : '—';
     const jdep = r.depEst || r.depTime || '';
-    const od = boardTime(jdep);
+    const od = (j && j.boarding) || boardTime(jdep);
     tiles = [
       ['報到櫃台', (j && j.counter) || (f && f.counterOrigin) || '—', true, !((j && j.counter) || (f && f.counterOrigin))],
       ['航廈・登機門', ot, false, ot === '—' || !jg],
